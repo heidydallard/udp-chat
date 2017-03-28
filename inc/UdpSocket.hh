@@ -11,9 +11,6 @@ public:
   UdpSocket(std::string const& port);
   UdpSocket(std::string const& ip_address, std::string const& port);
   ~UdpSocket();
-
-  static UdpSocket* getReceiver();
-  static UdpSocket* getSender(std::string const& ip_address, std::string const& port);
   
   ssize_t send(const char* message, int len);
   const char* recv(int maxSize);

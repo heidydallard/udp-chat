@@ -15,6 +15,7 @@ UdpSocket::UdpSocket(std::string const& port)
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_flags = AI_PASSIVE;
 
   if (getaddrinfo(NULL, port.c_str(), &hints, &res) != 0) {
     throw(std::runtime_error("getaddrinfo failed"));
@@ -84,7 +85,7 @@ const char* UdpSocket::recv(int maxSize)
 {
   char* buffer = new char[maxSize];
   struct sockaddr_in other;
-  socklen_t socklen;
+  socklen_t socklen = 0;
   ssize_t received = recvfrom(socket_, buffer, maxSize, 0,
 			      (struct sockaddr*)&other, &socklen);
 
