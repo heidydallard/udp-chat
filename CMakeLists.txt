@@ -11,7 +11,9 @@ INCLUDE_DIRECTORIES(inc)
 SET(SOURCE_FILES
   "src/UdpSocket.cpp"
   "src/main.cpp"
-  "src/ChatApplication.cpp"
+  "src/Receiver.cpp"
+  "src/Sender.cpp"
+  # "src/ChatApplication.cpp"
   )
 
 ADD_EXECUTABLE(chat ${SOURCE_FILES})

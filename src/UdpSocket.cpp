@@ -27,6 +27,7 @@ UdpSocket::UdpSocket(std::string const& port)
       throw(std::runtime_error("could not create socket"));
     }
 
+    struct sockaddr_in *ipv = (struct sockaddr_in *)it->ai_addr;
     if (bind(socket_, it->ai_addr, it->ai_addrlen) == 0) {
       sockaddr_ = it->ai_addr;
       socklen_ = it->ai_addrlen;
