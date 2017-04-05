@@ -21,6 +21,7 @@ private:
   void leave(std::string const& param);
   void who(std::string const& param);
   void privateMsg(std::string const& param);
+  void channel(std::string const& param);
   typedef void (Sender::*command_)(std::string const& param);
   std::map<std::string, command_> commandFuncs_;
 
@@ -33,6 +34,7 @@ private:
   UdpSocket* local_;
 
   std::string pseudo_;
+  std::string channel_;
   std::string pseudoPrivate_;
   MessageType current_;
   bool keep_;

@@ -7,6 +7,7 @@ Sender::Sender(std::string pseudo, UdpSocket* broadcast)
   commandFuncs_["/leave"] = &Sender::leave;
   commandFuncs_["/who"] = &Sender::who;
   commandFuncs_["/private"] = &Sender::privateMsg;
+  commandFuncs_["/channel"] = &Sender::channel;
 
   sendFuncs_[Sender::TALK] = &Sender::sendTalk;
   sendFuncs_[Sender::PRIVATE] = &Sender::sendPrivate;
@@ -16,6 +17,7 @@ Sender::Sender(std::string pseudo, UdpSocket* broadcast)
   keep_ = true;
   local_ = NULL;
   current_ = Sender::TALK;
+  channel_ = "general";
 }
 
 Sender::~Sender()
@@ -82,9 +84,18 @@ void Sender::privateMsg(std::string const& pseudo)
   std::cout << "Private message to " << pseudo << " : ";
 }
 
+void Sender::channel(std::string const& channel)
+{
+  std::string message = "command:CHANNEL-CHANGE\nchannel:" + channel + "\n\n";
+
+  local_->send(message.c_str(), message.size());
+  channel_ = channel;
+}
+
 void Sender::sendTalk(std::string const& message)
 {
-  std::string m = "user:" + pseudo_ + "\ncommand:TALK\nmessage:" + message + "\n\n";
+  std::string m = "user:" + pseudo_ + "\ncommand:TALK\nchannel:" + channel_
+    + "\nmessage:" + message + "\n\n";
 
   broadcast_->send(m.c_str(), m.size());
 }

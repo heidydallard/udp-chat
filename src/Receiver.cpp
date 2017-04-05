@@ -10,6 +10,7 @@ Receiver::Receiver(std::string pseudo, UdpSocket* broadcast)
   parseFuncs_["user"] = &Receiver::user;
   parseFuncs_["command"] = &Receiver::command;
   parseFuncs_["message"] = &Receiver::message;
+  parseFuncs_["channel"] = &Receiver::channel;
 
   buildFuncs_["JOIN"] = &Receiver::join;
   buildFuncs_["TALK"] = &Receiver::talk;
@@ -19,11 +20,13 @@ Receiver::Receiver(std::string pseudo, UdpSocket* broadcast)
   buildFuncs_["PING"] = &Receiver::ping;
   buildFuncs_["REQUEST-PRIVATE"] = &Receiver::requestPrivate;
   buildFuncs_["PRIVATE-TALK"] = &Receiver::privateTalk;
+  buildFuncs_["CHANNEL-CHANGE"] = &Receiver::changeChannel;
 
   pseudo_ = pseudo;
   broadcast_ = broadcast;
   keep_ = true;
   listenSocket_ = NULL;
+  channel_ = "general";
 }
 
 Receiver::~Receiver()
@@ -95,6 +98,13 @@ void Receiver::message(MessageData& md, std::string const& value)
   }
 }
 
+void Receiver::channel(MessageData& md, std::string const& value)
+{
+  if (md.channel == "") {
+    md.channel = value;
+  }
+}
+
 std::string Receiver::join(MessageData const& md, struct sockaddr_in* addr)
 {
   std::string message = "user:" + pseudo_ + "\ncommand:PING\n\n";
@@ -111,7 +121,9 @@ std::string Receiver::join(MessageData const& md, struct sockaddr_in* addr)
 
 std::string Receiver::talk(MessageData const& md, struct sockaddr_in* addr)
 {
-  return "[" + md.user + "]: " + md.message;
+  if (md.channel == channel_)
+    return "[" + md.user + " #" + md.channel +"]: " + md.message;
+  return "";
 }
 
 std::string Receiver::leave(MessageData const& md, struct sockaddr_in* addr)
@@ -183,4 +195,10 @@ std::string Receiver::requestPrivate(MessageData const& md, struct sockaddr_in* 
     }
   }
   return "";
+}
+
+std::string Receiver::changeChannel(MessageData const& md, struct sockaddr_in* addr)
+{
+  channel_ = md.channel;
+  return "Switched to channel " + channel_;
 }
