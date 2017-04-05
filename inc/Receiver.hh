@@ -27,7 +27,7 @@ private:
   struct User {
     std::string pseudo;
     std::string ip_address;
-    struct sockaddr_in* addr;
+    UdpSocket* socket;
   };
 
   std::string parseMessage(std::string const& message, struct sockaddr_in* addr);
@@ -38,6 +38,8 @@ private:
   std::string who(MessageData const& md, struct sockaddr_in* addr);
   std::string quit(MessageData const& md, struct sockaddr_in* addr);
   std::string ping(MessageData const& md, struct sockaddr_in* addr);
+  std::string privateTalk(MessageData const& md, struct sockaddr_in* addr);
+  std::string requestPrivate(MessageData const& md, struct sockaddr_in* addr);
   typedef std::string (Receiver::*build_)(MessageData const&, struct sockaddr_in* addr);
   std::map<std::string, build_> buildFuncs_;
 

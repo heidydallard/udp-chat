@@ -17,6 +17,8 @@ Receiver::Receiver(std::string pseudo, UdpSocket* broadcast)
   buildFuncs_["WHO"] = &Receiver::who;
   buildFuncs_["QUIT"] = &Receiver::quit;
   buildFuncs_["PING"] = &Receiver::ping;
+  buildFuncs_["REQUEST-PRIVATE"] = &Receiver::requestPrivate;
+  buildFuncs_["PRIVATE-TALK"] = &Receiver::privateTalk;
 
   pseudo_ = pseudo;
   broadcast_ = broadcast;
@@ -100,8 +102,7 @@ std::string Receiver::join(MessageData const& md, struct sockaddr_in* addr)
 
   u->pseudo = md.user;
   u->ip_address = inet_ntoa(addr->sin_addr);
-  u->addr = new struct sockaddr_in;
-  memcpy(u->addr, addr, sizeof(*addr));
+  u->socket = new UdpSocket(u->ip_address, "12000");
   
   broadcast_->send(message.c_str(), message.size());
   connected_.push_back(u);
@@ -153,17 +154,33 @@ std::string Receiver::quit(MessageData const& md, struct sockaddr_in* addr)
 std::string Receiver::ping(MessageData const& md, struct sockaddr_in* addr)
 {
   for (auto u : connected_) {
-    if (u->pseudo == md.user && u->addr->sin_addr.s_addr == addr->sin_addr.s_addr)
+    if (u->pseudo == md.user)
       return "";
   }
   User* user = new User;
 
   user->pseudo = md.user;
   user->ip_address = inet_ntoa(addr->sin_addr);
-  user->addr = new struct sockaddr_in;
-  memcpy(user->addr, addr, sizeof(*addr));
+  user->socket = new UdpSocket(user->ip_address, "12000");
 
   connected_.push_back(user);
 
+  return "";
+}
+
+std::string Receiver::privateTalk(MessageData const& md, struct sockaddr_in* addr)
+{
+  return "[" + md.user + "] (PRIVATE): " + md.message;
+}
+
+std::string Receiver::requestPrivate(MessageData const& md, struct sockaddr_in* addr)
+{
+  for (auto u : connected_) {
+    if (u->pseudo == md.user) {
+      std::string message = "user:" + pseudo_ + "\ncommand:PRIVATE-TALK\nmessage:" + md.message + "\n";
+
+      u->socket->send(message.c_str(), message.size());
+    }
+  }
   return "";
 }

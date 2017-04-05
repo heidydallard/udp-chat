@@ -6,11 +6,16 @@ Sender::Sender(std::string pseudo, UdpSocket* broadcast)
 {
   commandFuncs_["/leave"] = &Sender::leave;
   commandFuncs_["/who"] = &Sender::who;
+  commandFuncs_["/private"] = &Sender::privateMsg;
 
+  sendFuncs_[Sender::TALK] = &Sender::sendTalk;
+  sendFuncs_[Sender::PRIVATE] = &Sender::sendPrivate;
+  
   pseudo_ = pseudo;
   broadcast_ = broadcast;
   keep_ = true;
   local_ = NULL;
+  current_ = Sender::TALK;
 }
 
 Sender::~Sender()
@@ -33,19 +38,27 @@ void Sender::operator()()
   }
 }
 
-std::string Sender::buildMessage(std::string const& message)
+void Sender::buildMessage(std::string const& message)
 {
-  if (commandFuncs_.find(message) != commandFuncs_.end()) {
-    (this->*commandFuncs_[message])();
+  size_t idx = message.find_first_of(' ');
+  std::string command;
+  std::string param;
+  if (idx != std::string::npos) {
+    command = message.substr(0, idx);
+    param = message.substr(idx + 1);
   }
   else {
-    std::string m = "user:" + pseudo_ + "\ncommand:TALK\nmessage:" + message + "\n\n";
-
-    broadcast_->send(m.c_str(), m.size());
+    command = message;
+  }
+  if (commandFuncs_.find(command) != commandFuncs_.end()) {
+    (this->*commandFuncs_[command])(param);
+  }
+  else {
+    (this->*sendFuncs_[current_])(message);
   }
 }
 
-void Sender::leave()
+void Sender::leave(std::string const&)
 {
   std::string message = "user:" + pseudo_ + "\ncommand:LEAVE\n\n";
   std::string quitMessage = "command:QUIT\n\n";
@@ -55,9 +68,31 @@ void Sender::leave()
   keep_ = false;
 }
 
-void Sender::who()
+void Sender::who(std::string const&)
 {
   std::string message = "command:WHO\n\n";
   
   local_->send(message.c_str(), message.size());
+}
+
+void Sender::privateMsg(std::string const& pseudo)
+{
+  pseudoPrivate_ = pseudo;
+  current_ = PRIVATE;
+  std::cout << "Private message to " << pseudo << " : ";
+}
+
+void Sender::sendTalk(std::string const& message)
+{
+  std::string m = "user:" + pseudo_ + "\ncommand:TALK\nmessage:" + message + "\n\n";
+
+  broadcast_->send(m.c_str(), m.size());
+}
+
+void Sender::sendPrivate(std::string const& message)
+{
+  std::string m = "user:" + pseudoPrivate_ + "\ncommand:REQUEST-PRIVATE\nmessage:" + message + "\n\n";
+
+  local_->send(m.c_str(), m.size());
+  current_ = TALK;
 }
