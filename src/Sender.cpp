@@ -2,24 +2,25 @@
 
 #include "Sender.hh"
 
-Sender::Sender(std::string pseudo)
+Sender::Sender(std::string pseudo, UdpSocket* broadcast)
 {
   commandFuncs_["/leave"] = &Sender::leave;
   commandFuncs_["/who"] = &Sender::who;
 
-  keep_ = true;
   pseudo_ = pseudo;
+  broadcast_ = broadcast;
+  keep_ = true;
+  local_ = NULL;
 }
 
 Sender::~Sender()
 {
-  delete broadcast_;
-  delete local_;
+  if (local_)
+    delete local_;
 }
 
-void Sender::operator()(std::string const& ip_address)
+void Sender::operator()()
 {
-  broadcast_ = new UdpSocket(ip_address, "12000");
   local_ = new UdpSocket("127.0.0.1", "12000");
   std::string message;
   std::string joinMessage = "user:" + pseudo_ + "\ncommand:JOIN\n\n";

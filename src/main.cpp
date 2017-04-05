@@ -17,8 +17,9 @@ int main(int ac, char** av)
   std::cout << "Enter you name : ";
   std::getline(std::cin, pseudo);
 
-  std::thread* receiver = new std::thread(Receiver(pseudo));
-  std::thread* sender = new std::thread(Sender(pseudo), av[1]);
+  UdpSocket* broadcast = new UdpSocket(av[1], "12000");
+  std::thread* receiver = new std::thread(Receiver(pseudo, broadcast));
+  std::thread* sender = new std::thread(Sender(pseudo, broadcast));
 
   receiver->join();
   sender->join();

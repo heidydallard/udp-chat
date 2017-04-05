@@ -1,9 +1,11 @@
 #include <iostream>
 #include <sstream>
 
+#include <cstring>
+
 #include "Receiver.hh"
 
-Receiver::Receiver(std::string pseudo)
+Receiver::Receiver(std::string pseudo, UdpSocket* broadcast)
 {
   parseFuncs_["user"] = &Receiver::user;
   parseFuncs_["command"] = &Receiver::command;
@@ -14,23 +16,28 @@ Receiver::Receiver(std::string pseudo)
   buildFuncs_["LEAVE"] = &Receiver::leave;
   buildFuncs_["WHO"] = &Receiver::who;
   buildFuncs_["QUIT"] = &Receiver::quit;
+  buildFuncs_["PING"] = &Receiver::ping;
 
   pseudo_ = pseudo;
+  broadcast_ = broadcast;
   keep_ = true;
+  listenSocket_ = NULL;
 }
 
 Receiver::~Receiver()
 {
-  delete listenSocket_;
+  if (listenSocket_)
+    delete listenSocket_;
 }
 
 void Receiver::operator()()
 {
   listenSocket_ = new UdpSocket("12000");
+  struct sockaddr_in* addr = new struct sockaddr_in;
 
   while (keep_) {
-    const char* message = listenSocket_->recv(4096);
-    std::string toPrint = parseMessage(message);
+    const char* message = listenSocket_->recv(4096, addr);
+    std::string toPrint = parseMessage(message, addr);
 
     if (toPrint.size() > 0)
       std::cout << toPrint << std::endl;
@@ -40,7 +47,7 @@ void Receiver::operator()()
   std::cout << "Bye now!" << std::endl;
 }
 
-std::string Receiver::parseMessage(std::string const& message)
+std::string Receiver::parseMessage(std::string const& message, struct sockaddr_in* addr)
 {
   std::stringstream ss;
   std::string line;
@@ -61,7 +68,7 @@ std::string Receiver::parseMessage(std::string const& message)
     }
   }
   if (buildFuncs_.find(md.type) != buildFuncs_.end()) {
-    return (this->*buildFuncs_[md.type])(md);
+    return (this->*buildFuncs_[md.type])(md, addr);
   }
   return "";
 }
@@ -86,27 +93,42 @@ void Receiver::message(MessageData& md, std::string const& value)
   }
 }
 
-std::string Receiver::join(MessageData const& md)
+std::string Receiver::join(MessageData const& md, struct sockaddr_in* addr)
 {
   std::string message = "user:" + pseudo_ + "\ncommand:PING\n\n";
+  User* u = new User;
 
-  listenSocket_->send(message.c_str(), message.size());
-  connected_.push_back(md.user);
+  u->pseudo = md.user;
+  u->ip_address = inet_ntoa(addr->sin_addr);
+  u->addr = new struct sockaddr_in;
+  memcpy(u->addr, addr, sizeof(*addr));
+  
+  broadcast_->send(message.c_str(), message.size());
+  connected_.push_back(u);
   return md.user + " joined!";
 }
 
-std::string Receiver::talk(MessageData const& md)
+std::string Receiver::talk(MessageData const& md, struct sockaddr_in* addr)
 {
   return "[" + md.user + "]: " + md.message;
 }
 
-std::string Receiver::leave(MessageData const& md)
+std::string Receiver::leave(MessageData const& md, struct sockaddr_in* addr)
 {
-  connected_.remove(md.user);
+  User* ret = NULL;
+  for (auto u : connected_) {
+    if (u->pseudo == md.user) {
+      ret = u;
+      break;
+    }
+  }
+  if (ret != NULL) {
+    connected_.remove(ret);
+  }
   return md.user + " left!";
 }
 
-std::string Receiver::who(MessageData const& md)
+std::string Receiver::who(MessageData const& md, struct sockaddr_in* addr)
 {
   std::string message = "Connected users : [";
   bool isFirst = true;
@@ -116,20 +138,32 @@ std::string Receiver::who(MessageData const& md)
       isFirst = false;
     else
       message.append(", ");
-    message.append("'" + user + "'");
+    message.append("'" + user->pseudo + "'");
   }
   message.append("]");
   return message;
 }
 
-std::string Receiver::quit(MessageData const& md)
+std::string Receiver::quit(MessageData const& md, struct sockaddr_in* addr)
 {
   keep_ = false;
   return "";
 }
 
-std::string Receiver::ping(MessageData const& md)
+std::string Receiver::ping(MessageData const& md, struct sockaddr_in* addr)
 {
-  connected_.push_back(md.user());
+  for (auto u : connected_) {
+    if (u->pseudo == md.user && u->addr->sin_addr.s_addr == addr->sin_addr.s_addr)
+      return "";
+  }
+  User* user = new User;
+
+  user->pseudo = md.user;
+  user->ip_address = inet_ntoa(addr->sin_addr);
+  user->addr = new struct sockaddr_in;
+  memcpy(user->addr, addr, sizeof(*addr));
+
+  connected_.push_back(user);
+
   return "";
 }

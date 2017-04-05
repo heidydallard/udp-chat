@@ -8,7 +8,7 @@
 
 class Receiver {
 public:
-  Receiver(std::string pseudo);
+  Receiver(std::string pseudo, UdpSocket* broadcast);
   ~Receiver();
 
   void operator()();
@@ -24,15 +24,21 @@ private:
     std::string type;
   };
 
-  std::string parseMessage(std::string const& message);
+  struct User {
+    std::string pseudo;
+    std::string ip_address;
+    struct sockaddr_in* addr;
+  };
 
-  std::string join(MessageData const& md);
-  std::string talk(MessageData const& md);
-  std::string leave(MessageData const& md);
-  std::string who(MessageData const& md);
-  std::string quit(MessageData const& md);
-  std::string ping(MessageData const& md);
-  typedef std::string (Receiver::*build_)(MessageData const&);
+  std::string parseMessage(std::string const& message, struct sockaddr_in* addr);
+
+  std::string join(MessageData const& md, struct sockaddr_in* addr);
+  std::string talk(MessageData const& md, struct sockaddr_in* addr);
+  std::string leave(MessageData const& md, struct sockaddr_in* addr);
+  std::string who(MessageData const& md, struct sockaddr_in* addr);
+  std::string quit(MessageData const& md, struct sockaddr_in* addr);
+  std::string ping(MessageData const& md, struct sockaddr_in* addr);
+  typedef std::string (Receiver::*build_)(MessageData const&, struct sockaddr_in* addr);
   std::map<std::string, build_> buildFuncs_;
 
   void user(MessageData& md, std::string const& value);
@@ -41,8 +47,9 @@ private:
   typedef void (Receiver::*parse_)(MessageData&, std::string const&);
   std::map<std::string, parse_> parseFuncs_;
 
-  std::list<std::string> connected_;
+  std::list<User*> connected_;
   std::string pseudo_;
   UdpSocket* listenSocket_;
+  UdpSocket* broadcast_;
   bool keep_;
 };

@@ -82,13 +82,12 @@ ssize_t UdpSocket::send(const char* message, int len)
   return sendto(socket_, message, len, 0, sockaddr_, socklen_);
 }
 
-const char* UdpSocket::recv(int maxSize)
+const char* UdpSocket::recv(int maxSize, struct sockaddr_in* addr)
 {
   char* buffer = new char[maxSize];
-  struct sockaddr_in other;
-  socklen_t socklen = 0;
+  socklen_t socklen = sizeof(*addr);
   ssize_t received = recvfrom(socket_, buffer, maxSize, 0,
-			      (struct sockaddr*)&other, &socklen);
+			      (struct sockaddr*)addr, &socklen);
 
   if (received == -1) {
     delete [] buffer;

@@ -7,10 +7,10 @@
 
 class Sender {
 public:
-  Sender(std::string pseudo);
+  Sender(std::string pseudo, UdpSocket* broadcast);
   ~Sender();
 
-  void operator()(std::string const& ip_address);
+  void operator()();
 private:
   std::string buildMessage(std::string const& message);
 
