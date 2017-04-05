@@ -53,6 +53,7 @@ private:
   typedef void (Receiver::*parse_)(MessageData&, std::string const&);
   std::map<std::string, parse_> parseFuncs_;
 
+  std::list<std::string> ipList_;
   std::list<User*> connected_;
   std::string pseudo_;
   std::string channel_;

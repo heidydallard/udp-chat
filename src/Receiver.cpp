@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 #include <cstring>
 
@@ -27,6 +28,19 @@ Receiver::Receiver(std::string pseudo, UdpSocket* broadcast)
   keep_ = true;
   listenSocket_ = NULL;
   channel_ = "general";
+
+  struct ifaddrs* ifaddrs = NULL;
+  struct ifaddrs* it;
+
+  if (getifaddrs(&ifaddrs) != 0) {
+    throw(std::runtime_error("could not retrieve interfaces informations"));
+  }
+  for (it = ifaddrs; it != NULL; it = it->ifa_next) {
+    struct sockaddr_in* addr = (struct sockaddr_in*)it->ifa_addr;
+
+    ipList_.push_back(inet_ntoa(addr->sin_addr));
+  }
+  ipList_.unique();
 }
 
 Receiver::~Receiver()
@@ -113,10 +127,16 @@ std::string Receiver::join(MessageData const& md, struct sockaddr_in* addr)
   u->pseudo = md.user;
   u->ip_address = inet_ntoa(addr->sin_addr);
   u->socket = new UdpSocket(u->ip_address, "12000");
+  for (auto user : connected_) {
+    if (user->pseudo == md.user) {
+      u->pseudo += "@" + u->ip_address;
+      break;
+    }
+  }
   
-  broadcast_->send(message.c_str(), message.size());
+  u->socket->send(message.c_str(), message.size());
   connected_.push_back(u);
-  return md.user + " joined!";
+  return u->pseudo + " joined!";
 }
 
 std::string Receiver::talk(MessageData const& md, struct sockaddr_in* addr)
@@ -165,17 +185,19 @@ std::string Receiver::quit(MessageData const& md, struct sockaddr_in* addr)
 
 std::string Receiver::ping(MessageData const& md, struct sockaddr_in* addr)
 {
-  for (auto u : connected_) {
-    if (u->pseudo == md.user)
-      return "";
+  if (std::count(ipList_.begin(), ipList_.end(), inet_ntoa(addr->sin_addr)) == 0) {
+    User* user = new User;
+
+    user->pseudo = md.user;
+    user->ip_address = inet_ntoa(addr->sin_addr);
+    user->socket = new UdpSocket(user->ip_address, "12000");
+    for (auto u : connected_) {
+      if (u->pseudo == md.user)
+	user->pseudo += "@" + user->ip_address;
+    }
+
+    connected_.push_back(user);
   }
-  User* user = new User;
-
-  user->pseudo = md.user;
-  user->ip_address = inet_ntoa(addr->sin_addr);
-  user->socket = new UdpSocket(user->ip_address, "12000");
-
-  connected_.push_back(user);
 
   return "";
 }
