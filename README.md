@@ -52,4 +52,5 @@ Yeah !
 [Heidy #game]: Yeah !
 ...
 /leave
-Bye now!```
+Bye now!
+```
