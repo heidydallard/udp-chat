@@ -33,6 +33,7 @@ private:
   };
 
   std::string parseMessage(std::string const& message, struct sockaddr_in* addr);
+  std::string getPseudo(std::string const& ip_address);
 
   std::string join(MessageData const& md, struct sockaddr_in* addr);
   std::string talk(MessageData const& md, struct sockaddr_in* addr);

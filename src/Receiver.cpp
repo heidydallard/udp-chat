@@ -139,10 +139,20 @@ std::string Receiver::join(MessageData const& md, struct sockaddr_in* addr)
   return u->pseudo + " joined!";
 }
 
+std::string Receiver::getPseudo(std::string const& ip_address)
+{
+  for (User* u : connected_) {
+    if (u->ip_address == ip_address) {
+      return u->pseudo;
+    }
+  }
+  return "";
+}
+
 std::string Receiver::talk(MessageData const& md, struct sockaddr_in* addr)
 {
   if (md.channel == channel_)
-    return "[" + md.user + " #" + md.channel +"]: " + md.message;
+    return "[" + getPseudo(inet_ntoa(addr->sin_addr)) + " #" + md.channel +"]: " + md.message;
   return "";
 }
 
@@ -204,7 +214,7 @@ std::string Receiver::ping(MessageData const& md, struct sockaddr_in* addr)
 
 std::string Receiver::privateTalk(MessageData const& md, struct sockaddr_in* addr)
 {
-  return "[" + md.user + "] (PRIVATE): " + md.message;
+  return "[" + getPseudo(inet_ntoa(addr->sin_addr)) + "] (PRIVATE): " + md.message;
 }
 
 std::string Receiver::requestPrivate(MessageData const& md, struct sockaddr_in* addr)
